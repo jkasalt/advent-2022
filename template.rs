@@ -1,6 +1,10 @@
 use std::fs;
 use std::time::Instant;
 
+fn gen(input: &str) -> _ {
+
+}
+
 fn p1() -> u32 {
     0
 }
@@ -14,14 +18,14 @@ fn main() {
     let input = fs::read_to_string(path).unwrap();
 
     let in1 = Instant::now();
-    let mat = Matrix::new(&input);
+    let _ = gen(input);
     let in0 = Instant::now();
     println!("Input parsed in: {:?}", in0.duration_since(in1));
 
     let i11 = Instant::now();
     let res1 = p1();
     let i12 = Instant::now();
-    println!("silver: {:?}\ntime: {:?}\n", res1, i12.duration_since(i11));
+    println!("silver: {:?}\ntime: {:?}", res1, i12.duration_since(i11));
 
     println!("-----");
 
