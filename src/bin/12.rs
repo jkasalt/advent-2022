@@ -52,7 +52,7 @@ fn solve_p1(
     memory: &mut HashMap<Vec<(usize, usize)>, Option<u64>>,
 ) -> Option<u64> {
     let cur_cell = cells[cur_pos];
-    println!("{cur_cell}");
+    // println!("{cur_cell}");
     // println!("path: {cur_path:?}, cur_val: {cur_cell}");
     if cur_cell == 27 {
         // println!("Found the end!");
@@ -117,7 +117,7 @@ fn main() {
 }
 
 #[cfg(test)]
-mod d8 {
+mod d12 {
     use super::*;
 
     #[test]
