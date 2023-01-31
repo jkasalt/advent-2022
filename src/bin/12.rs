@@ -1,97 +1,90 @@
 use advent_2022::matrix::Matrix;
-use std::collections::HashMap;
-use std::fmt::Write;
+use itertools::Itertools;
+use rayon::prelude::*;
+use std::collections::BinaryHeap;
 use std::fs;
 use std::time::Instant;
 
-// #[derive(PartialEq)]
-// enum Cell {
-//     Start,
-//     End,
-//     El(u8),
-// }
-//
-// impl std::fmt::Debug for Cell {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Cell::Start => f.write_char('S'),
-//             Cell::End => f.write_char('E'),
-//             Cell::El(val) => f.write_fmt(format_args!("({val})")),
-//         }
-//     }
-// }
-
-fn gen(input: &str) -> Matrix<u8> {
+fn gen(input: &str) -> (Matrix<u8>, (usize, usize), (usize, usize)) {
     let width = input.lines().next().unwrap().len();
     let height = input.lines().count();
-    let items = input.chars().filter(|c| c.is_alphanumeric()).map(|c| {
-        if c == 'S' {
-            0
-        } else if c == 'E' {
-            27
-        } else {
-            let mut buf = [0];
-            c.encode_utf8(&mut buf);
-            buf[0] - 96
-        }
-    });
-    Matrix::new(items, width, height)
-}
-
-fn p1(mat: &Matrix<u8>) -> u64 {
-    let mut memory = HashMap::new();
-    let start_pos = mat.index_of(|c| *c == 0).unwrap();
-    solve_p1(mat, start_pos, vec![start_pos], 0, &mut memory).unwrap()
-}
-
-fn solve_p1(
-    cells: &Matrix<u8>,
-    cur_pos: (usize, usize),
-    cur_path: Vec<(usize, usize)>,
-    cur_steps: u64,
-    memory: &mut HashMap<Vec<(usize, usize)>, Option<u64>>,
-) -> Option<u64> {
-    let cur_cell = cells[cur_pos];
-    println!("{cur_cell}");
-    // println!("path: {cur_path:?}, cur_val: {cur_cell}");
-    if cur_cell == 27 {
-        // println!("Found the end!");
-        return Some(cur_steps);
-    }
-    if let Some(res) = memory.get(&cur_path) {
-        return *res;
-    }
-    cells
-        .rook_neighbor_indices(cur_pos.0, cur_pos.1)
-        .filter_map(|(x, y)| {
-            // print!("from {cur_pos:?}, looking at ({x}, {y})");
-            if cur_path.contains(&(x, y)) {
-                // println!(" but we already visited it");
-                return None;
-            }
-            let maybe_next_cell = cells[(x, y)];
-            if (0..=cur_cell + 1).contains(&maybe_next_cell) {
-                // println!("... we move there");
-                let mut path = cur_path.clone();
-                path.push((x, y));
-                if let Some(res) = memory.get(&path) {
-                    *res
-                } else {
-                    let res = solve_p1(cells, (x, y), path.clone(), cur_steps + 1, memory);
-                    memory.insert(path, res);
-                    // println!("Finished path: {res:?}");
-                    res
-                }
+    let mut start_pos = None;
+    let mut end_pos = None;
+    let items = input
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .enumerate()
+        .map(|(i, c)| {
+            if c == 'S' {
+                start_pos = Some((i % width, i / width));
+                1
+            } else if c == 'E' {
+                end_pos = Some((i % width, i / width));
+                26
             } else {
-                // println!(" but it's too high");
-                None
+                let mut buf = [0];
+                c.encode_utf8(&mut buf);
+                buf[0] - 96
             }
-        })
-        .min()
+        });
+    (
+        Matrix::new(items, width, height),
+        start_pos.unwrap(),
+        end_pos.unwrap(),
+    )
 }
 
-fn p2() -> u32 {
-    0
+#[derive(PartialEq, Eq)]
+struct State {
+    pos: (usize, usize),
+    cost: usize
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost).then_with(|| self.pos.cmp(&other.pos))
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn path_len(mat: &Matrix<u8>, start_pos: (usize, usize), end_pos: (usize, usize)) -> usize {
+    let width = mat.width();
+    let height = mat.height();
+    let mut dist = Matrix::new_with(width, height, || usize::MAX);
+    dist[start_pos] = 0;
+    let mut queue = BinaryHeap::<State>::new();
+    queue.push(State{pos: start_pos, cost: 0});
+
+    while let Some(State{pos, cost}) = queue.pop() {
+        let val = mat[pos];
+        if dist[pos] == usize::MAX {
+            continue;
+        }
+        mat.rook_neighbor_indices(pos.0, pos.1)
+            .filter(|v| mat[*v] <= val + 1)
+            .for_each(|v| {
+                let next = State{cost: cost + 1, pos: v};
+                if next.cost < dist[v] {
+                    dist[v] = next.cost;
+                    queue.push(next);
+                }
+            })
+    }
+    dist[end_pos]
+}
+
+fn p2(mat: &Matrix<u8>, end_pos: (usize, usize)) -> usize {
+    let xy: Vec<_> = (0..1).cartesian_product(0..mat.height()).collect();
+    xy.par_iter()
+        .filter(|(x, y)| mat[(x, y)] == 1)
+        .map(|(x, y)| path_len(mat, (*x, *y), end_pos))
+        .min()
+        .unwrap()
 }
 
 fn main() {
@@ -99,41 +92,44 @@ fn main() {
     let input = fs::read_to_string(path).unwrap();
 
     let in1 = Instant::now();
-    let mat = gen(&input);
+    let (mat, start_pos, end_pos) = gen(&input);
     let in0 = Instant::now();
     println!("Input parsed in: {:?}", in0.duration_since(in1));
 
     let i11 = Instant::now();
-    let res1 = p1(&mat);
+    let res1 = path_len(&mat, start_pos, end_pos);
     let i12 = Instant::now();
     println!("silver: {:?}\ntime: {:?}\n", res1, i12.duration_since(i11));
 
     println!("-----");
 
     let i21 = Instant::now();
-    let res2 = p2();
+    let res2 = p2(&mat, end_pos);
     let i22 = Instant::now();
     println!("gold: {:?}\ntime: {:?}", res2, i22.duration_since(i21));
 }
 
 #[cfg(test)]
-mod d8 {
+mod d12 {
     use super::*;
 
     #[test]
     fn t1() {
-        println!(
-            "Sabqponm
-abcryxxl
-accszExk
-acctuvwj
-abdefghi"
-        );
-        let cells = gen("Sabqponm
+        let (mat, start_pos, end_pos) = gen("Sabqponm
 abcryxxl
 accszExk
 acctuvwj
 abdefghi");
-        assert_eq!(p1(&cells), 31)
+        assert_eq!(path_len(&mat, start_pos, end_pos), 31)
+    }
+
+    #[test]
+    fn t2() {
+        let (mat, _, end_pos) = gen("Sabqponm
+abcryxxl
+accszExk
+acctuvwj
+abdefghi");
+        assert_eq!(p2(&mat, end_pos), 29)
     }
 }

@@ -139,7 +139,7 @@ fn p1(mut monkeys: Vec<Monkey>) -> usize {
 
 fn p2(mut monkeys: Vec<Monkey>) -> usize {
     let prod = monkeys.iter().map(|m| m.divisible_by).product();
-    for t in 0..10000 {
+    for _ in 0..10000 {
         monkey_round2(&mut monkeys, prod);
     }
     let mut vals: Vec<_> = monkeys.iter().map(|m| m.inspected).collect();

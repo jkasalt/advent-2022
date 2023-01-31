@@ -140,10 +140,23 @@ impl<T> Matrix<T> {
 
     pub fn new_default(width: usize, height: usize) -> Self
     where
-        T: Default + Clone,
+        T: Default,
     {
         Matrix {
-            vec: vec![T::default(); height * width],
+            vec: std::iter::repeat_with(|| T::default())
+                .take(height * width)
+                .collect(),
+            height,
+            width,
+        }
+    }
+
+    pub fn new_with<F>(width: usize, height: usize, f: F) -> Self
+    where
+        F: Fn() -> T,
+    {
+        Matrix {
+            vec: std::iter::repeat_with(f).take(height * width).collect(),
             height,
             width,
         }
@@ -155,8 +168,14 @@ impl<T> Matrix<T> {
         self.vec.swap(idx_a, idx_b)
     }
 
-    pub fn index_of<F>(&self, f: F ) -> Option<(usize, usize)> where F:FnMut(&T) -> bool {
-        self.vec.iter().position(f).map(|pos|(pos/self.width, pos%self.width))
+    pub fn index_of<F>(&self, f: F) -> Option<(usize, usize)>
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.vec
+            .iter()
+            .position(f)
+            .map(|pos| (pos % self.width, pos / self.width))
     }
 }
 
@@ -238,8 +257,8 @@ mod test {
     fn test_swap() {
         let items = 0..6;
         let mut matrix = Matrix::new(items, 3, 2);
-        matrix.swap((0,0), (0,1));
-        assert_eq!(matrix[(0,0)], 3);
-        assert_eq!(matrix[(0,1)], 0);
+        matrix.swap((0, 0), (0, 1));
+        assert_eq!(matrix[(0, 0)], 3);
+        assert_eq!(matrix[(0, 1)], 0);
     }
 }
