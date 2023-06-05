@@ -4,8 +4,8 @@ use std::fs;
 use std::time::Instant;
 
 static INPUT: Lazy<Data> = Lazy::new(|| {
-    let path = "bigboys/5/bigboy.txt";
-    // let path = "inputs/5.txt";
+    // let path = "bigboys/5/bigboy.txt";
+    let path = "inputs/5.txt";
     let input = fs::read_to_string(path).unwrap();
 
     let in1 = Instant::now();
