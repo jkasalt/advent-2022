@@ -1,10 +1,10 @@
 use itertools::Itertools;
 use regex::Regex;
-use std::collections::HashSet;
 use std::fs;
+use std::ops::RangeInclusive;
 use std::time::Instant;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Pos(i64, i64);
 
 fn gen(input: &str) -> Vec<(Pos, Pos)> {
@@ -21,9 +21,8 @@ fn gen(input: &str) -> Vec<(Pos, Pos)> {
         .collect()
 }
 
-fn p1(data: &[(Pos, Pos)], row: i64) -> usize {
-    let mut row_cover: Vec<i64> = data
-        .iter()
+fn row_cover(data: &[(Pos, Pos)], row: i64) -> Vec<Pos> {
+    data.iter()
         .flat_map(|(s, b)| {
             let l1_dist = (s.0 - b.0).abs() + (s.1 - b.1).abs();
             let cover_at_row = std::cmp::max(l1_dist - (s.1 - row).abs(), 0);
@@ -31,29 +30,46 @@ fn p1(data: &[(Pos, Pos)], row: i64) -> usize {
                 .chain((s.0 - cover_at_row)..s.0)
                 .collect::<Vec<_>>()
         })
-        .collect();
+        .map(|col| Pos(col, row))
+        .collect()
+}
+
+fn p1(data: &[(Pos, Pos)], row: i64) -> usize {
+    let mut row_cover = row_cover(data, row);
     row_cover.sort();
     row_cover.dedup();
     row_cover.len()
 }
 
 fn p2(data: &[(Pos, Pos)], max_search: i64) -> i64 {
-    let l1_dists: Vec<_> = data
-        .iter()
-        .map(|(s, b)| (s.0 - b.0).abs() + (s.1 - b.1).abs())
-        .collect();
-    let (x, y) = (0..=max_search)
-        .cartesian_product(0..=max_search)
-        .find(|(x, y)| {
-            println!("{x}, {y}");
-            !data
+    for row in 0..=max_search {
+        // Get row cover
+        let mut intervals: Vec<_> = data
+            .iter()
+            .map(|(s, b)| {
+                let l1_dist = (s.0 - b.0).abs() + (s.1 - b.1).abs();
+                let cover_at_row = std::cmp::max(l1_dist - (s.1 - row).abs(), 0);
+                (s.0 - cover_at_row, s.0 + cover_at_row)
+            })
+            .collect();
+        // A row is filled if every interval oter than the first has its head inside another interval,
+        // and the smallest interval head is less that the lower bound on the search range,
+        // and the largest interval head is greater than the higher bound on the search range
+        // TODO: make the below variable correct with respect to line 1 of the above comment
+        intervals.sort_by_key(|(head, _)| *head);
+        println!("{intervals:?}");
+        let all_heads_ok = intervals.iter().enumerate().all(|(i, (head, _))| {
+            intervals[..i]
                 .iter()
-                .enumerate()
-                .any(|(i, (s, _))| (s.0 - x).abs() + (s.1 - y).abs() <= l1_dists[i])
-        })
-        .unwrap();
-    println!("{x}, {y}");
-    x * 4_000_000 + y
+                .any(|(other_head, other_tail)| other_head <= head && head <= other_tail)
+        });
+        println!("{all_heads_ok}");
+        if !(intervals[0].0 <= 0 && intervals[intervals.len() - 1].1 >= max_search && all_heads_ok)
+        {
+            return 14 * 4_000_000 + row;
+        }
+    }
+    unreachable!()
 }
 
 fn main() {

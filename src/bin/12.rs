@@ -37,12 +37,15 @@ fn gen(input: &str) -> (Matrix<u8>, (usize, usize), (usize, usize)) {
 #[derive(PartialEq, Eq)]
 struct State {
     pos: (usize, usize),
-    cost: usize
+    cost: usize,
 }
 
 impl Ord for State {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.cost.cmp(&self.cost).then_with(|| self.pos.cmp(&other.pos))
+        other
+            .cost
+            .cmp(&self.cost)
+            .then_with(|| self.pos.cmp(&other.pos))
     }
 }
 
@@ -58,9 +61,12 @@ fn path_len(mat: &Matrix<u8>, start_pos: (usize, usize), end_pos: (usize, usize)
     let mut dist = Matrix::new_with(width, height, || usize::MAX);
     dist[start_pos] = 0;
     let mut queue = BinaryHeap::<State>::new();
-    queue.push(State{pos: start_pos, cost: 0});
+    queue.push(State {
+        pos: start_pos,
+        cost: 0,
+    });
 
-    while let Some(State{pos, cost}) = queue.pop() {
+    while let Some(State { pos, cost }) = queue.pop() {
         let val = mat[pos];
         if dist[pos] == usize::MAX {
             continue;
@@ -68,7 +74,10 @@ fn path_len(mat: &Matrix<u8>, start_pos: (usize, usize), end_pos: (usize, usize)
         mat.rook_neighbor_indices(pos.0, pos.1)
             .filter(|v| mat[*v] <= val + 1)
             .for_each(|v| {
-                let next = State{cost: cost + 1, pos: v};
+                let next = State {
+                    cost: cost + 1,
+                    pos: v,
+                };
                 if next.cost < dist[v] {
                     dist[v] = next.cost;
                     queue.push(next);
@@ -99,7 +108,7 @@ fn main() {
     let i11 = Instant::now();
     let res1 = path_len(&mat, start_pos, end_pos);
     let i12 = Instant::now();
-    println!("silver: {:?}\ntime: {:?}\n", res1, i12.duration_since(i11));
+    println!("silver: {:?}\ntime: {:?}", res1, i12.duration_since(i11));
 
     println!("-----");
 

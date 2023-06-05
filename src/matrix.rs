@@ -187,7 +187,7 @@ where
         let mut count = 0;
         writeln!(f)?;
         for item in &self.vec {
-            write!(f, "{:?}", item)?;
+            write!(f, "{item:?}")?;
             count += 1;
             if count == self.width {
                 count = 0;

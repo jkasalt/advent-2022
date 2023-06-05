@@ -15,11 +15,12 @@ enum ListEl {
 
 impl Ord for ListEl {
     fn cmp(&self, other: &Self) -> Ordering {
+        use ListEl::*;
         match (self, other) {
-            (ListEl::Num(n1), ListEl::Num(n2)) => n1.cmp(n2),
-            (ListEl::L(l1), ListEl::L(l2)) => l1.cmp(l2),
-            (ListEl::Num(n1), l2) => ListEl::L(vec![ListEl::Num(*n1)]).cmp(l2),
-            (l1, ListEl::Num(n2)) => l1.cmp(&ListEl::L(vec![ListEl::Num(*n2)])),
+            (Num(n1), Num(n2)) => n1.cmp(n2),
+            (L(l1), L(l2)) => l1.cmp(l2),
+            (Num(n1), l2) => L(vec![Num(*n1)]).cmp(l2),
+            (l1, Num(n2)) => l1.cmp(&L(vec![Num(*n2)])),
         }
     }
 }
